@@ -1,0 +1,34 @@
+#include <iostream>
+#include <SDL2/SDL.h>
+
+int main (void) {
+    const unsigned short HEIGHT = 255;
+    const unsigned short WIDTH = 128;
+
+   if (SDL_Init(SDL_INIT_EVERYTHING) == 1) {
+        std::cerr << "Error with initializing." << std::endl;
+        return -1;
+    }
+
+    _Surface* screen_surface = nullptr;
+    SDL_Window* window = nullptr;      
+
+    window = SDL_CreateWindow("main", 
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              WIDTH, HEIGHT, SDL_WINDOW_SHOWN); 
+    
+    if (window == NULL) {
+        std::cerr << "Erorr with creating a window." << std::endl;
+        return -1;
+    }
+
+    screen_surface = SDL_GetWindowSurface(window);
+
+    SDL_FillRect(screen_surface, NULL, SDL_MapRGB(screen_surface->format, 0, 255, 0));
+    SDL_UpdateWindowSurface(window);
+    SDL_DestroyWindow(window);
+    SDL_Quit(); 
+
+    return 0;
+}
