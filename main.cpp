@@ -1,37 +1,62 @@
 #include <iostream>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_rect.h>
+#include <SDL2/SDL_events.h>
+#include <vector>
+
+#include "vec2flib.cpp"
+#include "Object.cpp"
+
+#define FPS 60
+#define WIDTH 128
+#define HEIGHT 256
 
 typedef unsigned short us;
+typedef unsigned int uint;
 
-struct Sprites {
-    SDL_Surface *sprites[512];
-    int last;
-};
-
-
-void ccr (int res, const char *e);
-int init (SDL_Surface **sur, SDL_Window **win, us w, us h); 
-int load_image (Sprites &sprites, const char *path);
 void quit (SDL_Window **win, SDL_Surface **sur);
+void ccr (int res, const char *e);
+
+int init (SDL_Surface **sur, SDL_Window **win, us w, us h); 
 
 int main (void) {
-    const us HEIGHT = 255;
-    const us WIDTH = 255;
+    bool isRunning = true;
 
     SDL_Surface *screen_surface = nullptr;
     SDL_Window *window = nullptr;
 
-    Sprites objects;
-    objects.last = 0;
-
+    std::vector<Object> objects {};
+   
     ccr(init(&screen_surface, &window, WIDTH, HEIGHT), "Error while initializing.");
-    ccr(load_image(objects, "./assets/cat.bmp"), "Error with loading a file!");
+    //Main part below
+    objects.push_back(Object((vec2f) {0.0, 0.0}, (vec2f) {0.0, 0.0}, SDL_LoadBMP("./assets/cat.bmp")));
+    objects.push_back(Object((vec2f) {100.0, 0.0}, (vec2f) {0.0, 0.0}, SDL_LoadBMP("./assets/cat.bmp")));
 
-    SDL_BlitSurface(objects.sprites[0], nullptr, screen_surface, nullptr);
+    SDL_Event e;
 
-    SDL_UpdateWindowSurface(window);    
-    SDL_Delay(2000);
-    
+    while (isRunning) {
+        while (SDL_PollEvent(&e) != 0) {
+            if (e.type == SDL_QUIT) {
+                isRunning = false;
+            } else if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP:
+                        std::cout << "1111" << std::endl;
+                }
+            }
+        }
+
+        for (uint i = 0; i < objects.size(); i++) {
+            SDL_Rect dest;
+            dest.x = objects[i].pos.x;
+            dest.y = objects[i].pos.y;
+            SDL_BlitSurface(objects[i].sprite, NULL, screen_surface, &dest);
+        }
+        SDL_UpdateWindowSurface(window);
+        SDL_Delay(1000/FPS);
+    };
+
+
     quit(&window, &screen_surface);
     return 0;
 }
@@ -57,15 +82,6 @@ int init (SDL_Surface **sur, SDL_Window **win, us w, us h) {
         return -1;
     }
     *sur = SDL_GetWindowSurface(*win);
-    return 0;
-}
-
-int load_image (Sprites &sprites, const char *path) {
-    SDL_Surface *img = SDL_LoadBMP(path);
-    if (img == nullptr) {
-        return -1;
-    }
-    sprites.sprites[sprites.last++] = img;
     return 0;
 }
 
