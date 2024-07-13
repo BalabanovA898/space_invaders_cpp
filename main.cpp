@@ -1,38 +1,55 @@
+#include <cstdlib>
 #include <iostream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_rect.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_surface.h>
 #include <vector>
 
 #include "vec2flib.cpp"
-#include "Object.cpp"
+#include "Player.h"
+#include "Enemy.h"
 
-#define FPS 60
-#define WIDTH 128
-#define HEIGHT 256
+#define FPS 25
+#define WIDTH 128.0
+#define HEIGHT 256.0
+#define SPEED 1
+#define PLAYER_FLY_HEIGHT 230.0
+#define PLAYER_WIDTH 10
+#define PLAYER_HEIGHT 5
+#define MAX_ENEMIES_PER_LINE 10
+#define MAX_LINE_COUNT 22
+#define LINE_HEIGHT 10
 
 typedef unsigned short us;
 typedef unsigned int uint;
 
 void quit (SDL_Window **win, SDL_Surface **sur);
 void ccr (int res, const char *e);
+void clear (SDL_Surface **dst);
 
-int init (SDL_Surface **sur, SDL_Window **win, us w, us h); 
+int init (SDL_Surface **sur, SDL_Window **win, us w, us h);
+
+void spawn_enemy (std::vector<Enemy> &vec);
 
 int main (void) {
     bool isRunning = true;
+    unsigned short frame = 0;
 
     SDL_Surface *screen_surface = nullptr;
     SDL_Window *window = nullptr;
 
-    std::vector<Object> objects {};
-   
     ccr(init(&screen_surface, &window, WIDTH, HEIGHT), "Error while initializing.");
-    //Main part below
-    objects.push_back(Object((vec2f) {0.0, 0.0}, (vec2f) {0.0, 0.0}, SDL_LoadBMP("./assets/cat.bmp")));
-    objects.push_back(Object((vec2f) {100.0, 0.0}, (vec2f) {0.0, 0.0}, SDL_LoadBMP("./assets/cat.bmp")));
 
+    //Main part below
     SDL_Event e;
+    Player player = Player((vec2f) {WIDTH/2.0 - PLAYER_WIDTH/2.0, PLAYER_FLY_HEIGHT},
+                           (vec2f) {0.0, 0.0}, PLAYER_WIDTH, PLAYER_HEIGHT,
+                           SDL_LoadBMP("./assets/cat.bmp"));
+
+    std::vector<Enemy> enemies {Enemy((vec2f) {WIDTH/2.0 - PLAYER_WIDTH/2.0, LINE_HEIGHT},
+                        (vec2f) {1.0, 0.0}, PLAYER_WIDTH, PLAYER_HEIGHT,
+                        SDL_LoadBMP("./assets/cat.bmp"))};
 
     while (isRunning) {
         while (SDL_PollEvent(&e) != 0) {
@@ -41,25 +58,76 @@ int main (void) {
             } else if (e.type == SDL_KEYDOWN) {
                 switch (e.key.keysym.sym) {
                     case SDLK_UP:
-                        std::cout << "1111" << std::endl;
+                        isRunning = false;
+                    case SDLK_LEFT:
+                        player.vel.x = -SPEED;
+                        break;
+                    case SDLK_RIGHT:
+                        player.vel.x = SPEED;
+                        break;
                 }
             }
         }
 
-        for (uint i = 0; i < objects.size(); i++) {
-            SDL_Rect dest;
-            dest.x = objects[i].pos.x;
-            dest.y = objects[i].pos.y;
-            SDL_BlitSurface(objects[i].sprite, NULL, screen_surface, &dest);
+        clear(&screen_surface);
+
+        if (frame % 100 == 0) {
+            spawn_enemy(enemies);
         }
+
+        {
+            player.move(WIDTH);
+
+            SDL_Rect dest;
+            SDL_Rect src;
+
+            dest.x = player.pos.x;
+            dest.y = player.pos.y;
+
+            src.x = 0;
+            src.y = 0;
+            src.w = player.width;
+            src.h = player.height;
+
+            SDL_BlitSurface(player.sprite, &src, screen_surface, &dest);
+        }
+
+        {
+            for (uint index = 0; index < enemies.size(); ++index) {
+                if (frame % 50 == 0) {
+                    enemies[index].next_line(LINE_HEIGHT);
+                }
+
+                if (enemies[index].pos.y >= HEIGHT) {
+                    isRunning = false;
+                    std::cout << "Game over!!!" << std::endl;
+                }
+
+                enemies[index].move(WIDTH, PLAYER_WIDTH);
+
+                SDL_Rect dest;
+                SDL_Rect src;
+
+                dest.x = enemies[index].pos.x;
+                dest.y = enemies[index].pos.y;
+
+                src.x = 0;
+                src.y = 0;
+                src.w = enemies[index].width;
+                src.h = enemies[index].height;
+
+                SDL_BlitSurface(player.sprite, &src, screen_surface, &dest);
+            }
+        }
+       
+        frame += 1;
+
         SDL_UpdateWindowSurface(window);
         SDL_Delay(1000/FPS);
     };
-
-
-    quit(&window, &screen_surface);
-    return 0;
 }
+
+
 
 void ccr (int res, const char *e) {
     if (res != 0) {
@@ -85,6 +153,10 @@ int init (SDL_Surface **sur, SDL_Window **win, us w, us h) {
     return 0;
 }
 
+void clear (SDL_Surface **dst) {
+    SDL_FillRect(*dst, NULL, 0x000000);
+}
+
 void quit (SDL_Window **win, SDL_Surface **sur) {
     SDL_FreeSurface(*sur);
     *sur = nullptr;
@@ -92,4 +164,18 @@ void quit (SDL_Window **win, SDL_Surface **sur) {
     SDL_DestroyWindow(*win);
 
     SDL_Quit();    
+}
+
+void spawn_enemy (std::vector<Enemy> &vec) {
+    std::srand((unsigned)time(0));
+
+    vec2f velocity = vec2f {(float)((int)std::rand()%2), 0.0};
+    if (velocity.x == 0) {
+        velocity.x = -1;
+    }
+
+    Enemy new_enemy = Enemy((vec2f) {WIDTH/2.0 - PLAYER_WIDTH/2.0, 0},
+                        velocity, PLAYER_WIDTH, PLAYER_HEIGHT,
+                        SDL_LoadBMP("./assets/cat.bmp"));
+    vec.push_back(new_enemy);
 }
