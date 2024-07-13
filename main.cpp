@@ -9,6 +9,7 @@
 #include "vec2flib.cpp"
 #include "Player.h"
 #include "Enemy.h"
+#include "Bullet.h"
 
 #define FPS 25
 #define WIDTH 128.0
@@ -34,7 +35,9 @@ void spawn_enemy (std::vector<Enemy> &vec);
 
 int main (void) {
     bool isRunning = true;
-    unsigned short frame = 0;
+    us frame = 0;
+    us game_difficulty = 0;
+    us score = 0;
 
     SDL_Surface *screen_surface = nullptr;
     SDL_Window *window = nullptr;
@@ -50,6 +53,8 @@ int main (void) {
     std::vector<Enemy> enemies {Enemy((vec2f) {WIDTH/2.0 - PLAYER_WIDTH/2.0, LINE_HEIGHT},
                         (vec2f) {1.0, 0.0}, PLAYER_WIDTH, PLAYER_HEIGHT,
                         SDL_LoadBMP("./assets/cat.bmp"))};
+
+    std::vector<Bullet> bullets {};
 
     while (isRunning) {
         while (SDL_PollEvent(&e) != 0) {
@@ -71,8 +76,12 @@ int main (void) {
 
         clear(&screen_surface);
 
-        if (frame % 100 == 0) {
+        if (frame % (100 - game_difficulty) == 0) {
             spawn_enemy(enemies);
+        }
+
+        if (frame % 10 == 0) {
+            player.shoot(bullets);
         }
 
         {
@@ -94,13 +103,21 @@ int main (void) {
 
         {
             for (uint index = 0; index < enemies.size(); ++index) {
+                for (uint i = 0; i < bullets.size(); ++i) {
+                    if (enemies[index].check_collision(bullets[i].pos)) {
+                        enemies.erase(enemies.begin() + index);
+                        bullets.erase(bullets.begin() + i);
+                        score += 1;
+                    }
+                }
+
                 if (frame % 50 == 0) {
                     enemies[index].next_line(LINE_HEIGHT);
                 }
 
                 if (enemies[index].pos.y >= HEIGHT) {
                     isRunning = false;
-                    std::cout << "Game over!!!" << std::endl;
+                    std::cout << "Game over!!! Score: " << score << std::endl;
                 }
 
                 enemies[index].move(WIDTH, PLAYER_WIDTH);
@@ -116,11 +133,43 @@ int main (void) {
                 src.w = enemies[index].width;
                 src.h = enemies[index].height;
 
-                SDL_BlitSurface(player.sprite, &src, screen_surface, &dest);
+                SDL_BlitSurface(enemies[index].sprite, &src, screen_surface, &dest);
+            }
+        }
+
+        {
+            for (uint index = 0; index < bullets.size(); ++index) {
+                if (frame % 6 == 0) {
+                    bullets[index].move();
+                }
+
+                if (enemies[index].pos.y <= 0) {
+                    bullets.erase(bullets.begin());
+                }
+
+                bullets[index].move();
+
+                SDL_Rect dest;
+                SDL_Rect src;
+
+                dest.x = bullets[index].pos.x;
+                dest.y = bullets[index].pos.y;
+
+                src.x = 0;
+                src.y = 0;
+                src.w = bullets[index].width;
+                src.h = bullets[index].height;
+
+                SDL_BlitSurface(bullets[index].sprite, &src, screen_surface, &dest);
             }
         }
        
         frame += 1;
+
+        if (frame%100 == 0) {
+            if (game_difficulty <= 98)
+                game_difficulty += 2;
+        }
 
         SDL_UpdateWindowSurface(window);
         SDL_Delay(1000/FPS);

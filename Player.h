@@ -1,6 +1,9 @@
 #include "Object.h"
 #include "vec2flib.cpp"
+#include "Bullet.h"
+
 #include <SDL2/SDL.h>
+#include <vector>
 
 #ifndef PLAYER_H
 #define PLAYER_H
@@ -21,6 +24,12 @@ class Player: public Object {
         new_pos.x = 0 - width/2.0 + 1.0;
       }
       pos = new_pos;
+    }
+    void shoot(std::vector<Bullet> &bullets) {
+      Bullet bullet =  Bullet {(vec2f) {(float) (pos.x + width/2.0), pos.y},
+                        (vec2f) {0.0, -2.0}, 2.0, 2.0,
+                        SDL_LoadBMP("./assets/cat.bmp")};
+      bullets.push_back(bullet);
     }
 };
 

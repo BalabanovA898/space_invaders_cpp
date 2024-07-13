@@ -25,6 +25,13 @@ class Enemy: public Object {
     void next_line (float line_height) {
       pos = add(pos, vec2f {0.0, line_height});
     }
+
+    bool check_collision(vec2f position) {
+      if (position.x >= pos.x && position.x <= pos.x + width && position.y >= pos.y && position.y <= pos.y) {
+        return true;
+      }
+      return false;
+    }
 };
 
 #endif
